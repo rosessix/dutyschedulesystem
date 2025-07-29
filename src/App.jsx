@@ -509,7 +509,14 @@ export default function ShiftScheduler() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ShiftCalendar shifts={shifts} currentMonth={currentMonth} employees={employees} removeEmployeeFromShift={removeEmployeeFromShift} toggleEveningShift={toggleEveningShift}/>
+                <ShiftCalendar 
+                  shifts={shifts}
+                  currentMonth={currentMonth}
+                  employees={employees}
+                  removeEmployeeFromShift={removeEmployeeFromShift}
+                  toggleEveningShift={toggleEveningShift}
+                  addEmployeeToShift={addEmployeeToShift}
+                />
               </CardContent>
             </Card>
           </div>

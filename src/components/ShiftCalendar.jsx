@@ -38,7 +38,7 @@ const getUniqueColorForEmployee = (employeeId, employees) => {
 }
 
 
-const ShiftCalendar = ({ shifts, currentMonth, employees, removeEmployeeFromShift, toggleEveningShift }) => {
+const ShiftCalendar = ({ shifts, currentMonth, employees, removeEmployeeFromShift, toggleEveningShift, addEmployeeToShift }) => {
     const monthStart = startOfMonth(currentMonth)
     const monthEnd = endOfMonth(currentMonth)
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 })
