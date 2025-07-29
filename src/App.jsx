@@ -11,38 +11,12 @@ import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, Plus, Trash2, Users, CalendarIcon as CalendarIconLucide, Settings } from "lucide-react"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns"
 import { da } from "date-fns/locale"
+import { ShiftDialogue } from "./components/ShiftDialogue"
+import ShiftCalendar from "./components/ShiftCalendar"
 
 const weekDays = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag"]
-
-const COLORS = [
-  "#C4D7FF",
-  "#FFD7C4",
-  "#FFA5A5",
-  "#FF7777",
-  "#A6D0E4",
-  "#A1C398",
-  "#FDC7FF",
-  "#4DA8DA",
-  "#AC87C5",
-  "#9E9FA5",
-  "#FDFFAE",
-  "#8294C4"
-];
-
 const WEEKEND_EMPLOYEES = 4
 const WEEKDAY_EMPLOYEES = 2
-
-// Returnerer farve baseret på medarbejderens position i sorteret liste
-const getUniqueColorForEmployee = (employeeId, employees) => {
-  // Sortér medarbejdere efter id for konsistent rækkefølge
-  const sortedEmployees = employees.slice().sort((a, b) => a.id.localeCompare(b.id));
-  // Find indeks på den aktuelle medarbejder i listen
-  const index = sortedEmployees.findIndex(emp => emp.id === employeeId);
-  if (index === -1) return "#ccc"; // fallback hvis ikke fundet
-
-  // Returner farve baseret på index (mod farvelængde)
-  return COLORS[index % COLORS.length];
-};
 
 export default function ShiftScheduler() {
   const [employees, setEmployees] = useState([])
@@ -61,6 +35,7 @@ export default function ShiftScheduler() {
         preferredDays: [],
         workloadPreference: "normal",
         timeOffRequests: [],
+        maxShiftsPerMonth: 15,
       }
       setEmployees([...employees, newEmployee])
       setNewEmployeeName("")
@@ -127,19 +102,28 @@ export default function ShiftScheduler() {
     const employee = employees.find(e => e.id === employeeId)
     if (!employee) return
 
+    const dayOfWeek = getDay(date)
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6
+
     setShifts(prev => {
       const existingShift = prev.find(s => s.date.getTime() === date.getTime())
       if (existingShift) {
         if (existingShift.employees.some(e => e.id === employeeId)) return prev // already added
 
+        // Tjek om der allerede er en earlyShift tildelt for denne dag
+        const hasEarlyShift = isWeekend && existingShift.employees.some(e => e.earlyShift)
+
         return prev.map(s => {
           if (s.date.getTime() === date.getTime()) {
-            return { ...s, employees: [...s.employees, { id: employee.id, name: employee.name }] }
+            return {
+              ...s,
+              employees: [...s.employees, { id: employee.id, name: employee.name, earlyShift: isWeekend && !hasEarlyShift }]
+            }
           }
           return s
         })
       } else {
-        return [...prev, { date, employees: [{ id: employee.id, name: employee.name }] }]
+        return [...prev, { date, employees: [{ id: employee.id, name: employee.name, earlyShift: isWeekend }] }]
       }
     })
   }
@@ -152,85 +136,112 @@ export default function ShiftScheduler() {
           return { ...s, employees: updatedEmployees }
         }
         return s
-      }).filter(s => s.employees.length > 0) // fjern skiftet helt hvis der ikke er nogen medarbejdere tilbage
+      }).filter(s => s.employees.length > 0)
     })
   }
 
   // Generate shifts for the month
   const generateShifts = () => {
-    const monthStart = startOfMonth(currentMonth) // fx 1. juli
-    const monthEnd = endOfMonth(currentMonth)     // fx 31. juli
-    
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 }) // mandag
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })       // søndag
-
+    console.log('generating new!')
+    const monthStart = startOfMonth(currentMonth)
+    const monthEnd = endOfMonth(currentMonth)
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
     const daysInMonth = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
     const newShifts = []
 
     daysInMonth.forEach((date) => {
-      // Determine how many employees needed (2 for weekdays, 4 for weekends)
-      // getDay(): 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
-      // Weekend: Friday (5), Saturday (6), Sunday (0)
-      if (date.getMonth() !== monthStart.getMonth()) return;
+      if (date.getMonth() !== monthStart.getMonth()) return
       const dayOfWeek = getDay(date)
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6
       const employeesNeeded = isWeekend ? WEEKEND_EMPLOYEES : WEEKDAY_EMPLOYEES
 
-      // For preferred days, we need to convert to our display order (Mon=0, Tue=1, ..., Sun=6)
       const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1
 
-      // Find employees who are available (not on time off)
+      // Find tilgængelige medarbejdere (ikke på fridage)
       const availableEmployees = employees.filter((emp) => {
-        const isAvailable = !emp.timeOffRequests.some((timeOff) => timeOff.getTime() === date.getTime())
+        const isAvailable = !emp.timeOffRequests.some(
+          (timeOff) => timeOff.getTime() === date.getTime()
+        )
         return isAvailable
       })
 
-      if (availableEmployees.length === 0) return
+      if (availableEmployees.length === 0) {
+        console.warn(`Ingen tilgængelige medarbejdere til ${format(date, "dd/MM/yyyy", { locale: da })}`)
+        return
+      }
 
       const assignedEmployees = []
 
-      // First, try to assign employees who prefer this day
-      const preferredEmployees = availableEmployees.filter((emp) => emp.preferredDays.includes(adjustedDayOfWeek))
+      // Tæl nuværende vagter for hver medarbejder i denne måned
+      const employeeShiftCounts = availableEmployees.map((emp) => ({
+        employee: emp,
+        shiftCount: newShifts.reduce((count, shift) => {
+          return count + (shift.employees.some((e) => e.id === emp.id) ? 1 : 0)
+        }, 0),
+      }))
 
-      // Add preferred employees first (up to the limit nee<ded)
-      preferredEmployees.slice(0, employeesNeeded).forEach((emp) => {
-        assignedEmployees.push({ id: emp.id, name: emp.name })
+      // Filtrer medarbejdere, der ikke har nået deres maxShiftsPerMonth
+      const eligibleEmployees = employeeShiftCounts.filter(
+        ({ employee, shiftCount }) => shiftCount < (employee.maxShiftsPerMonth || Infinity)
+      )
+
+      if (eligibleEmployees.length < employeesNeeded) {
+        console.warn(
+          `Kun ${eligibleEmployees.length} af ${employeesNeeded} medarbejdere tilgængelige til ${format(date, "dd/MM/yyyy", { locale: da })}`
+        )
+      }
+
+      // Først, tildel medarbejdere der foretrækker denne dag
+      const preferredEmployees = eligibleEmployees.filter(({ employee }) =>
+        employee.preferredDays.includes(adjustedDayOfWeek)
+      )
+
+      // Tildel foretrukne medarbejdere først (op til behovet)
+      let earlyShiftAssigned = false
+      preferredEmployees.slice(0, employeesNeeded).forEach(({ employee }, index) => {
+        assignedEmployees.push({
+          id: employee.id,
+          name: employee.name,
+          earlyShift: isWeekend && index === 0 && !earlyShiftAssigned
+        })
+        if (isWeekend && index === 0) earlyShiftAssigned = true
       })
 
-      // If we still need more employees, assign based on workload preference and current shift count
+      // Hvis der stadig mangler medarbejdere, tildel baseret på arbejdsmængde og vagttælling
       if (assignedEmployees.length < employeesNeeded) {
-        const remainingEmployees = availableEmployees.filter(
-          (emp) => !assignedEmployees.some((assigned) => assigned.id === emp.id),
+        const remainingEmployees = eligibleEmployees.filter(
+          ({ employee }) => !assignedEmployees.some((assigned) => assigned.id === employee.id)
         )
 
-        // Count current shifts for each remaining employee this month
-        const employeeShiftCounts = remainingEmployees.map((emp) => ({
-          employee: emp,
-          shiftCount: newShifts.reduce((count, shift) => {
-            return count + (shift.employees.some((e) => e.id === emp.id) ? 1 : 0)
-          }, 0),
-        }))
-
-        // Sort by workload preference and shift count
-        employeeShiftCounts.sort((a, b) => {
-          // High workload preference gets priority
+        // Sorter efter arbejdsmængde præference og vagttælling
+        remainingEmployees.sort((a, b) => {
           if (a.employee.workloadPreference === "high" && b.employee.workloadPreference !== "high") return -1
           if (b.employee.workloadPreference === "high" && a.employee.workloadPreference !== "high") return 1
-
-          // Low workload preference gets lower priority
           if (a.employee.workloadPreference === "low" && b.employee.workloadPreference !== "low") return 1
           if (b.employee.workloadPreference === "low" && a.employee.workloadPreference !== "low") return -1
-
-          // Then sort by current shift count (ascending)
           return a.shiftCount - b.shiftCount
         })
 
-        // Add remaining employees needed
+        // Tildel resterende medarbejdere
         const stillNeeded = employeesNeeded - assignedEmployees.length
-        employeeShiftCounts.slice(0, stillNeeded).forEach(({ employee }) => {
-          assignedEmployees.push({ id: employee.id, name: employee.name })
+        remainingEmployees.slice(0, stillNeeded).forEach(({ employee }, index) => {
+          assignedEmployees.push({
+            id: employee.id,
+            name: employee.name,
+            earlyShift: isWeekend && !earlyShiftAssigned
+          })
+          if (isWeekend && !earlyShiftAssigned) earlyShiftAssigned = true
         })
+      }
+
+      if (isWeekend && !earlyShiftAssigned && assignedEmployees.length > 0) {
+        console.warn(
+          `Ingen earlyShift tildelt til ${format(date, "dd/MM/yyyy", { locale: da })} - utilstrækkelige medarbejdere`
+        )
+        // Tildel earlyShift til første medarbejder som en fallback
+        assignedEmployees[0].earlyShift = true
       }
 
       if (assignedEmployees.length > 0) {
@@ -244,83 +255,44 @@ export default function ShiftScheduler() {
     setShifts(newShifts)
   }
 
-  // Get shifts for a specific date
-  const getShiftForDate = (date) => {
-    return shifts.find((shift) => shift.date.getTime() === date.getTime())
-  }
+  const toggleEveningShift = (date, employeeId) => {
+    setShifts(prevShifts =>
+      prevShifts.map(shift => {
+        if (shift.date.getTime() !== date.getTime()) return shift;
 
-  // Calendar component for displaying shifts
-  const ShiftCalendar = () => {
-    const monthStart = startOfMonth(currentMonth)
-    const monthEnd = endOfMonth(currentMonth)
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 }) // mandag
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })       // søndag
-    const daysInMonth = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+        const dayOfWeek = getDay(shift.date);
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
 
-    return (
-      <div className="grid grid-cols-7 gap-2">
-        {weekDays.map((day) => (
-          <div key={day} className="p-2 text-center font-semibold text-sm">
-            {day.slice(0, 3)}
-          </div>
-        ))}
-        {daysInMonth.map((date) => {
-          const shift = getShiftForDate(date)
-          const hasTimeOff = employees.some((emp) =>
-            emp.timeOffRequests.some((timeOff) => timeOff.getTime() === date.getTime()),
-          )
-          const dayOfWeek = getDay(date)
-          // Weekend: Friday (5), Saturday (6), Sunday (0)
-          const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6
-          const isOutsideMonth = date.getMonth() !== currentMonth.getMonth()
-          return (
-            <div key={date.getTime()} className={`min-h-[120px] p-2 border rounded-lg ${isOutsideMonth ? "bg-muted text-muted-foreground" : ""}`}>
-              <div className="text-sm font-medium mb-1">
-                {format(date, "d")}
-                <span className="text-xs text-muted-foreground ml-1">({isWeekend ? "4" : "2"})</span>
-              </div>
-              {shift && (
-                <div className="space-y-1">
-                  {shift.employees.map((employee, index) => {
-                    const dayOfWeek = getDay(shift.date);
-                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
+        return {
+          ...shift,
+          employees: shift.employees.map(emp => {
+            if (!isWeekend) {
+              // For hverdage, toggle frit
+              if (emp.id === employeeId) {
+                const newEarlyShift = !emp.earlyShift;
+                console.log(`Toggling ${emp.name}: earlyShift from ${emp.earlyShift} to ${newEarlyShift}`);
+                return { ...emp, earlyShift: newEarlyShift };
+              }
+              return emp;
+            }
 
-                    return (
-                      <Badge
-                        key={employee.id}
-                        variant="default"
-                        className="text-sm w-full text-black flex justify-between"
-                        style={{ backgroundColor: getUniqueColorForEmployee(employee.id, employees) }}
-                      >
-                        {isWeekend && index === 0 ? `${employee.name} - 16` : employee.name}
-                        <Button variant="transparent" size='sm' className={'group hover:bg-slate-700 hover:text-red-700 cursor-pointer transition-all'} onClick={() => removeEmployeeFromShift(date, employee.id)}>
-                          <Trash2 className="w-12 h-12 group-hover:scale-125" />
-                        </Button>
-                      </Badge>
-                    )
-                  })}
-
-                </div>
-              )}
-              <Select onValueChange={(empId) => addEmployeeToShift(date, empId)}>
-                <SelectTrigger className="w-full text-xs h-8">
-                  <SelectValue placeholder="+ Tilføj" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )
-          {/* + button to add employee */}
-        })}
-      </div>
-    )
-  }
+            // For weekender, overfør earlyShift
+            if (emp.id === employeeId) {
+              const newEarlyShift = !emp.earlyShift;
+              console.log(`Toggling ${emp.name}: earlyShift from ${emp.earlyShift} to ${newEarlyShift}`);
+              return { ...emp, earlyShift: newEarlyShift };
+            }
+            // Fjern earlyShift fra andre medarbejdere
+            if (emp.earlyShift) {
+              console.log(`Removing earlyShift from ${emp.name}`);
+              return { ...emp, earlyShift: false };
+            }
+            return emp;
+          }),
+        };
+      })
+    );
+  };
 
   return (
     <div className="container mx-auto p-6 max-w-8xl">
@@ -419,6 +391,20 @@ export default function ShiftScheduler() {
                           <SelectItem value="high">Høj (flere vagter)</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Maks. antal vagter pr. måned</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={employee.maxShiftsPerMonth || ""}
+                        onChange={(e) =>
+                          setEmployees(employees.map((emp) =>
+                            emp.id === employee.id ? { ...emp, maxShiftsPerMonth: Number(e.target.value) } : emp
+                          ))
+                        }
+                        className="mt-2"
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -523,7 +509,7 @@ export default function ShiftScheduler() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ShiftCalendar />
+                <ShiftCalendar shifts={shifts} currentMonth={currentMonth} employees={employees} removeEmployeeFromShift={removeEmployeeFromShift} toggleEveningShift={toggleEveningShift}/>
               </CardContent>
             </Card>
           </div>
@@ -545,6 +531,7 @@ export default function ShiftScheduler() {
                   <li>Generer vagtplan - systemet prioriterer foretrukne dage og arbejdsmængde</li>
                   <li>Medarbejdere med "høj" præference får flere vagter</li>
                   <li>Medarbejdere med "lav" præference får færre vagter</li>
+                  <li>I weekender tildeles én medarbejder automatisk en tidlig vagt (kl. 16)</li>
                 </ul>
               </div>
             </CardContent>
