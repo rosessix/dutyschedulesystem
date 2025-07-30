@@ -1,12 +1,17 @@
-# React + Vite
+# Duty Schedule System
+![Image of system](https://i.imgur.com/XDTmhVp.png)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+### What does it do?
+This is a system built to help ease the struggle of making schedules for work. You enter the names of your employees, choose their prefered work days, choose their time off (if they have requested any) and press generate. As simple as that.
 
-Currently, two official plugins are available:
+You can choose how many shifts can get per month, and their prio in workload. They can be low prio, giving them less shifts than those with "normal" or "high" workload.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### What is it built with?
+This project is build with Vite + React. I used ShadCN to make the UI a little easier to make, as I made this project rather quickly to show my own colleague how I can help ease his burden with schedule making.
 
-## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+#### Images of the system
+
+![Employee section](https://i.imgur.com/mHYgJv6.png)
+
+
