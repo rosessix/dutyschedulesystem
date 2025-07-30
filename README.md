@@ -10,8 +10,15 @@ You can choose how many shifts can get per month, and their prio in workload. Th
 This project is build with Vite + React. I used ShadCN to make the UI a little easier to make, as I made this project rather quickly to show my own colleague how I can help ease his burden with schedule making.
 
 
-#### Images of the system
-
+## Images of the system
+#### Employee section:
 ![Employee section](https://i.imgur.com/mHYgJv6.png)
+
+#### Time off section:
+![Time off section](https://i.imgur.com/z5VZaEW.png)
+
+#### Calendar section:
+![Calendar section](https://i.imgur.com/XDTmhVp.png)
+
 
 
