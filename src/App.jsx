@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, Plus, Trash2, Users, CalendarIcon as CalendarIconLucide, Settings } from "lucide-react"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns"
 import { da } from "date-fns/locale"
-import { ShiftDialogue } from "./components/ShiftDialogue"
+import { toast, Toaster } from "sonner"
 import ShiftCalendar from "./components/ShiftCalendar"
 
 const weekDays = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag"]
@@ -168,9 +168,8 @@ export default function ShiftScheduler() {
       })
 
       if (availableEmployees.length === 0) {
-        alert(`Ingen tilgængelige medarbejdere til ${format(date, "dd/MM/yyyy", { locale: da })}`)
+        toast.error(`Ingen tilgængelige medarbejdere til ${format(date, "dd/MM/yyyy", { locale: da })}`)
         console.warn(`Ingen tilgængelige medarbejdere til ${format(date, "dd/MM/yyyy", { locale: da })}`)
-        return
       }
 
       const assignedEmployees = []
@@ -189,10 +188,11 @@ export default function ShiftScheduler() {
       )
 
       if (eligibleEmployees.length < employeesNeeded) {
-        alert(`Kun ${eligibleEmployees.length} af ${employeesNeeded} medarbejdere tilgængelige til ${format(date, "dd/MM/yyyy", { locale: da })}`)
+        toast.error(`Kun ${eligibleEmployees.length} af ${employeesNeeded} medarbejdere tilgængelige til ${format(date, "dd/MM/yyyy", { locale: da })}`)
         console.warn(
           `Kun ${eligibleEmployees.length} af ${employeesNeeded} medarbejdere tilgængelige til ${format(date, "dd/MM/yyyy", { locale: da })}`
         )
+        return
       }
 
       // Først, tildel medarbejdere der foretrækker denne dag
@@ -239,7 +239,7 @@ export default function ShiftScheduler() {
       }
 
       if (isWeekend && !earlyShiftAssigned && assignedEmployees.length > 0) {
-        alert(`Ingen earlyShift tildelt til ${format(date, "dd/MM/yyyy", { locale: da })} - utilstrækkelige medarbejdere`)
+        toast.error(`Ingen earlyShift tildelt til ${format(date, "dd/MM/yyyy", { locale: da })} - utilstrækkelige medarbejdere`)
         console.warn(
           `Ingen earlyShift tildelt til ${format(date, "dd/MM/yyyy", { locale: da })} - utilstrækkelige medarbejdere`
         )
@@ -550,6 +550,7 @@ export default function ShiftScheduler() {
           </Card>
         </TabsContent>
       </Tabs>
+      <Toaster richColors closeButton />
     </div>
   )
 }
