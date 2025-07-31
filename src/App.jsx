@@ -302,7 +302,7 @@ export default function ShiftScheduler() {
       </div>
 
       <Tabs defaultValue="employees" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full h-full grid-cols-1 md:grid-cols-4 gap-2">
           <TabsTrigger value="employees" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
             Medarbejdere
@@ -336,8 +336,8 @@ export default function ShiftScheduler() {
                     onChange={(e) => setNewEmployeeName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addEmployee()}
                   />
-                  <Button onClick={addEmployee}>
-                    <Plus className="w-4 h-4 mr-2" />
+                  <Button onClick={addEmployee} className="text-center">
+                    <Plus className="w-4 h-4 mr-2 text-center" />
                     Tilføj
                   </Button>
                 </div>
@@ -358,7 +358,7 @@ export default function ShiftScheduler() {
                   <CardContent className="space-y-4">
                     <div>
                       <Label className="text-sm font-medium">Foretrukne dage</Label>
-                      <div className="grid grid-cols-7 gap-2 mt-2">
+                      <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
                         {weekDays.map((day, index) => (
                           <div key={day} className="flex items-center space-x-2">
                             <Switch
@@ -490,20 +490,22 @@ export default function ShiftScheduler() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex justify-between items-center">
+                <div className="w-full max-w-full flex flex-col md:flex-row break-all justify-between items-center">
                   <div>
                     <CardTitle>Vagtplan for {format(currentMonth, "MMMM yyyy", { locale: da })}</CardTitle>
                     <CardDescription>
                       Generer og se vagtplanen for måneden (2 på hverdage, 4 i weekender inkl. fredag)
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-                      ← Forrige
-                    </Button>
-                    <Button variant="outline" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-                      Næste →
-                    </Button>
+                  <div className="flex flex-col md:flex-row gap-2 mt-2 md:mt-0">
+                    <div className="flex flex-row gap-2">
+                      <Button variant="outline" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                        ← Forrige
+                      </Button>
+                      <Button variant="outline" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                        Næste →
+                      </Button>
+                    </div>
                     <Button onClick={generateShifts}>Generer Vagtplan</Button>
                   </div>
                 </div>
