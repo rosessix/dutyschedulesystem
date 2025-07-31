@@ -168,6 +168,7 @@ export default function ShiftScheduler() {
       })
 
       if (availableEmployees.length === 0) {
+        alert(`Ingen tilgængelige medarbejdere til ${format(date, "dd/MM/yyyy", { locale: da })}`)
         console.warn(`Ingen tilgængelige medarbejdere til ${format(date, "dd/MM/yyyy", { locale: da })}`)
         return
       }
@@ -188,6 +189,7 @@ export default function ShiftScheduler() {
       )
 
       if (eligibleEmployees.length < employeesNeeded) {
+        alert(`Kun ${eligibleEmployees.length} af ${employeesNeeded} medarbejdere tilgængelige til ${format(date, "dd/MM/yyyy", { locale: da })}`)
         console.warn(
           `Kun ${eligibleEmployees.length} af ${employeesNeeded} medarbejdere tilgængelige til ${format(date, "dd/MM/yyyy", { locale: da })}`
         )
@@ -237,6 +239,7 @@ export default function ShiftScheduler() {
       }
 
       if (isWeekend && !earlyShiftAssigned && assignedEmployees.length > 0) {
+        alert(`Ingen earlyShift tildelt til ${format(date, "dd/MM/yyyy", { locale: da })} - utilstrækkelige medarbejdere`)
         console.warn(
           `Ingen earlyShift tildelt til ${format(date, "dd/MM/yyyy", { locale: da })} - utilstrækkelige medarbejdere`
         )
