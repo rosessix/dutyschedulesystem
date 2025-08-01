@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -11,6 +11,11 @@ export function ShiftDialogue({ onDelete, isEveningShift, onToggle }) {
         setEvening(checked)
         onToggle?.(checked)
     }
+
+    useEffect(() => {
+        setEvening(isEveningShift)
+    }, [isEveningShift])
+
 
     return (
         <Dialog>
