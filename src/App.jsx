@@ -13,6 +13,8 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths,
 import { da } from "date-fns/locale"
 import { toast, Toaster } from "sonner"
 import ShiftCalendar from "./components/ShiftCalendar"
+import html2canvas from "html2canvas"
+import domtoimage from 'dom-to-image-more'
 
 const weekDays = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag"]
 const WEEKEND_EMPLOYEES = 4
@@ -297,8 +299,31 @@ export default function ShiftScheduler() {
     );
   };
 
+  const handleExportAsImage = async () => {
+    const element = document.getElementById('desktop-schedule-export')
+    if (!element) return
+
+    // Vis elementet midlertidigt
+    element.classList.remove('hidden')
+
+    const canvas = await html2canvas(element, {
+      scale: 2, // høj opløsning
+      useCORS: true,
+      windowWidth: 1920,
+      windowHeight: 1080,
+    })
+
+    // Skjul igen
+    element.classList.add('hidden')
+
+    const link = document.createElement('a')
+    link.download = `vagtplan - ${ format(currentMonth, "MMMM-yyyy", { locale: da }) }.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  }
+
   return (
-    <div className="container mx-auto p-6 max-w-8xl">
+    <div id="system" className="container mx-auto p-6 max-w-8xl">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Vagtplanlægning</h1>
         <p className="text-muted-foreground">Administrer medarbejdere, fridage og generer vagtplaner</p>
@@ -509,7 +534,12 @@ export default function ShiftScheduler() {
                         Næste →
                       </Button>
                     </div>
-                    <Button onClick={generateShifts}>Generer Vagtplan</Button>
+                    <Button onClick={generateShifts}>
+                      Generer Vagtplan
+                    </Button>
+                    <Button variant="outline" className="bg-blue-400 text-white hover:bg-blue-500 hover:text-white/80" onClick={handleExportAsImage}>
+                      Gem som billede
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -524,6 +554,20 @@ export default function ShiftScheduler() {
                 />
               </CardContent>
             </Card>
+          </div>
+          <div
+            id="desktop-schedule-export"
+            className="desktop-export hidden absolute left-[-9999px] top-0 w-[1920px] bg-white p-4"
+          >
+            <ShiftCalendar
+              shifts={shifts}
+              currentMonth={currentMonth}
+              employees={employees}
+              removeEmployeeFromShift={() => { }}
+              toggleEveningShift={() => { }}
+              addEmployeeToShift={() => { }}
+              exportMode={true}
+            />
           </div>
         </TabsContent>
 
