@@ -39,7 +39,7 @@ const getUniqueColorForEmployee = (employeeId, employees) => {
 }
 
 
-const ShiftCalendar = ({ shifts, currentMonth, employees, removeEmployeeFromShift, toggleEveningShift, addEmployeeToShift }) => {
+const ShiftCalendar = ({ shifts, currentMonth, employees, removeEmployeeFromShift, toggleEveningShift, addEmployeeToShift, exportMode }) => {
     const monthStart = startOfMonth(currentMonth)
     const monthEnd = endOfMonth(currentMonth)
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 })
@@ -63,6 +63,7 @@ const ShiftCalendar = ({ shifts, currentMonth, employees, removeEmployeeFromShif
         return (
             <>
                 <div className="text-sm font-medium mb-1 hidden md:block ">
+                    <h1 className="text-md font-bold ml-1">{format(date, "d. MMMM", { locale: da })}</h1>
                     <span className="text-xs text-muted-foreground ml-1">Udbringere - {isWeekend ? "4" : "2"}</span>
                 </div>
                 {shift && (
@@ -88,9 +89,12 @@ const ShiftCalendar = ({ shifts, currentMonth, employees, removeEmployeeFromShif
                     </div>
                 )}
                 <Select onValueChange={(empId) => addEmployeeToShift(date, empId)}>
-                    <SelectTrigger className="w-full text-xs h-8">
-                        <SelectValue placeholder="+ Tilføj" />
-                    </SelectTrigger>
+                    {!exportMode && (
+                        <SelectTrigger className="w-full text-xs h-8">
+                            <SelectValue placeholder="+ Tilføj" />
+                        </SelectTrigger>
+
+                    )}
                     <SelectContent>
                         {employees.map((emp) => (
                             <SelectItem key={emp.id} value={emp.id}>
@@ -103,7 +107,7 @@ const ShiftCalendar = ({ shifts, currentMonth, employees, removeEmployeeFromShif
         )
     }
 
-    if (isMobile) {
+    if (isMobile && !exportMode) {
         return (
             <div className="w-full h-full flex flex-col gap-4 p-2">
                 {daysInMonth.map((date) => {
